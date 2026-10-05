@@ -1,3 +1,5 @@
+build/
+out/
+sources/
 *.tar
 *.tar.gz
-Dockerfile

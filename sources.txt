@@ -1,0 +1,12 @@
+# Pinned upstream sources. Everything compiled into the rsync binary comes
+# from these tarballs (plus musl and libgcc from the Alpine toolchain).
+# cpe is the vendor:product name in NVD's CPE dictionary, which vulnerability
+# scanners match the SBOM against; - if the project has none.
+#
+# name    version  sha256                                                            url                                                                                      cpe                 license (SPDX, of the code linked into rsync)
+rsync     3.5.1    c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef  https://download.samba.org/pub/rsync/src/rsync-3.5.1.tar.gz                              samba:rsync         GPL-3.0-or-later
+acl       2.4.0    e661131456d2708a01c614a0f400e11d7d1bfaeb6f3e74b75bb980b72f0161a3  https://download-mirror.savannah.gnu.org/releases/acl/acl-2.4.0.tar.xz                   acl_project:acl     LGPL-2.1-or-later
+openssl   3.5.9    603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a  https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz  openssl:openssl     Apache-2.0
+zstd      1.5.7    eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3  https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz              facebook:zstandard  BSD-3-Clause
+lz4       1.10.0   537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b  https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz                   lz4_project:lz4     BSD-2-Clause
+xxhash    0.8.4    5738270935e7c3d38a79b3adf7c9692566ce7895a25f67de43ad52ab504acd32  https://github.com/Cyan4973/xxHash/archive/refs/tags/v0.8.4.tar.gz                       -                   BSD-2-Clause

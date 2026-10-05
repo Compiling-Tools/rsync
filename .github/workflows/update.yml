@@ -1,0 +1,49 @@
+name: Update rsync
+
+# Opens a pull request when a new rsync release is out. Merge it and push a
+# v<version> tag to publish. GitHub holds the Build workflow on pull requests
+# opened with the workflow token until someone clicks "Approve workflows to
+# run" on the pull request.
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Update sources.txt
+        id: update
+        run: |
+          version=$(./update.sh)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request
+        if: steps.update.outputs.version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.update.outputs.version }}
+        run: |
+          branch=update-rsync-$VERSION
+          # One pull request per version: closing it unmerged stops further
+          # ones. The push is forced in case an earlier run pushed the branch
+          # but failed before opening the pull request.
+          prs=$(gh pr list --head "$branch" --state all --json number --jq '.[]')
+          if [ -n "$prs" ]; then
+            echo "a pull request for $branch already exists"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git commit -am "Update rsync to $VERSION"
+          git push --force origin "$branch"
+          gh pr create --title "Update rsync to $VERSION" \
+            --body "https://download.samba.org/pub/rsync/NEWS#$VERSION"

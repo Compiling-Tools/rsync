@@ -1,0 +1,26 @@
+Add the notice for the statically linked libacl to `rsync --version` and its
+JSON form `rsync -VV`, as required by LGPL-2.1 section 6. Modified by
+static-rsync on 2026-10-01.
+
+--- a/usage.c
++++ b/usage.c
+@@ -314,6 +314,7 @@
+ 
+ 	if (f == FNONE) {
+ 		json_line("license", "GPLv3");
++		json_line("libacl", "Copyright (C) 1999-2026 Andreas Gruenbacher, Silicon Graphics, Inc. and others; LGPL-2.1-or-later, see https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html");
+ 		json_line("caveat", "rsync comes with ABSOLUTELY NO WARRANTY");
+ 		printf("\n}\n");
+ 		fflush(stdout);
+@@ -337,6 +338,11 @@
+ 	rprintf(f,"rsync comes with ABSOLUTELY NO WARRANTY.  This is free software, and you\n");
+ 	rprintf(f,"are welcome to redistribute it under certain conditions.  See the GNU\n");
+ 	rprintf(f,"General Public Licence for details.\n");
++	rprintf(f,"\n");
++	rprintf(f,"This static build contains libacl, Copyright (C) 1999-2026 Andreas\n");
++	rprintf(f,"Gruenbacher, Silicon Graphics, Inc. and others, under the GNU Lesser\n");
++	rprintf(f,"General Public License 2.1 or later. See the licenses shipped with this\n");
++	rprintf(f,"binary or https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html\n");
+ }
+ 
+ void usage(enum logcode F)

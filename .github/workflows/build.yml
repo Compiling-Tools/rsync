@@ -1,0 +1,215 @@
+name: Build
+
+# Every push to main and every pull request builds and tests all
+# architectures. Pushing a tag like v3.5.1 (or v3.5.1-2 for a rebuild of the
+# same rsync) additionally attests and publishes the release and the
+# container image.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # arch is Alpine's name for the architecture and ends up in the file
+        # names. Anything not built on a native runner runs under QEMU.
+        include:
+          - { arch: x86_64, platform: linux/amd64, runner: ubuntu-24.04 }
+          - { arch: aarch64, platform: linux/arm64, runner: ubuntu-24.04-arm }
+          - { arch: x86, platform: linux/386, runner: ubuntu-24.04 }
+          - { arch: armv7, platform: linux/arm/v7, runner: ubuntu-24.04 }
+          - { arch: riscv64, platform: linux/riscv64, runner: ubuntu-24.04 }
+          - { arch: ppc64le, platform: linux/ppc64le, runner: ubuntu-24.04 }
+          - { arch: s390x, platform: linux/s390x, runner: ubuntu-24.04 }
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Release tags are v<rsync version>, plus -<number> for rebuilds.
+      - name: Check the tag against sources.txt
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(awk '$1 == "rsync" { print $2 }' sources.txt)
+          case "${GITHUB_REF_NAME#"v$version"}" in
+            "" | -[1-9] | -[1-9][0-9]) ;;
+            *) echo "::error::tag $GITHUB_REF_NAME does not match rsync $version in sources.txt"; exit 1 ;;
+          esac
+
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build
+        run: |
+          SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
+          export SOURCE_DATE_EPOCH
+          echo "SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH" >> "$GITHUB_ENV"
+          docker buildx build --platform "$PLATFORM" \
+            --build-arg SOURCE_DATE_EPOCH --output out .
+
+      # test.sh already ran inside the Alpine build; this checks that the
+      # binary also runs on a different distribution. It runs in a container
+      # so that the compiled code never sees this job's OIDC token.
+      - name: Run on Ubuntu
+        run: |
+          file out/rsync
+          docker run --rm -v "$PWD/out:/out:ro" ubuntu:24.04 /out/rsync --version
+
+      - name: Check that the build is reproducible
+        if: matrix.arch == 'x86_64'
+        run: |
+          docker buildx build --no-cache --platform "$PLATFORM" \
+            --build-arg SOURCE_DATE_EPOCH --output out2 .
+          cmp out/rsync out2/rsync
+          cmp out/rsync.spdx.json out2/rsync.spdx.json
+
+      - name: Collect files
+        run: |
+          mkdir -p dist "image/$PLATFORM"
+          cp out/rsync "dist/rsync-$ARCH"
+          cp out/rsync.spdx.json "dist/rsync-$ARCH.spdx.json"
+          cp out/rsync "image/$PLATFORM/"
+
+      - name: Attest build provenance
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/rsync-${{ matrix.arch }}
+
+      - name: Attest SBOM
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: dist/rsync-${{ matrix.arch }}
+          sbom-path: dist/rsync-${{ matrix.arch }}.spdx.json
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: rsync-${{ matrix.arch }}
+          path: |
+            dist/
+            image/
+            out/licenses/
+
+  # A failed release can be re-run: the GitHub release stays a draft until the
+  # image is pushed and attested. Releases run one at a time so that `latest`
+  # always ends up on the newest version, even when an older one is rebuilt.
+  # (GitHub cancels a waiting run when a third one queues; re-run it.)
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          merge-multiple: true
+
+      - name: Check whether this is the newest release
+        id: newest
+        run: |
+          newest=$(git ls-remote --tags --refs origin 'v[0-9]*' | sed 's|.*refs/tags/||' | sort -V | tail -n 1)
+          if [ "$newest" = "$GITHUB_REF_NAME" ]; then
+            echo "latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The Corresponding Source for the GPL and LGPL: this repository plus
+      # every pinned tarball, enough to rebuild (and relink) the binaries.
+      - name: Bundle source and licenses
+        run: |
+          name=rsync-static-${GITHUB_REF_NAME#v}
+          ./fetch.sh
+          mkdir -p "stage/$name"
+          git archive HEAD | tar -x -C "stage/$name"
+          cp -r sources "stage/$name/"
+          tar -czf "dist/$name-source.tar.gz" -C stage "$name"
+          tar -czf "dist/$name-licenses.tar.gz" -C out licenses
+
+      - name: Checksum
+        run: cd dist && sha256sum -- * > SHA256SUMS
+
+      # The binaries were attested by the build jobs; this covers the rest.
+      - name: Attest source and licenses
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: |
+            dist/rsync-static-*.tar.gz
+            dist/SHA256SUMS
+
+      - name: Upload to a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" > /dev/null; then
+            gh release create "$GITHUB_REF_NAME" --draft \
+              --title "rsync ${GITHUB_REF_NAME#v}" \
+              --notes "Static rsync ${GITHUB_REF_NAME#v}. See the README for how to verify the downloads."
+          elif [ "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" != true ]; then
+            echo "::error::release $GITHUB_REF_NAME is already published; tag a rebuild instead"
+            exit 1
+          fi
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Push image
+        id: image
+        run: |
+          name=ghcr.io/${GITHUB_REPOSITORY,,}
+          platforms=$(cd image && find . -name rsync | sed 's|^\./||; s|/rsync$||' | sort | paste -sd, -)
+          cp -r out/licenses image/
+          docker buildx build -f Dockerfile.image --platform "$platforms" \
+            --tag "$name:${GITHUB_REF_NAME#v}" --metadata-file metadata.json --push image
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "digest=$(jq -r '."containerimage.digest"' metadata.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Attest image provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+
+      - name: Tag the image as latest
+        if: steps.newest.outputs.latest == 'true'
+        env:
+          NAME: ${{ steps.image.outputs.name }}
+          DIGEST: ${{ steps.image.outputs.digest }}
+        run: docker buildx imagetools create --tag "$NAME:latest" "$NAME@$DIGEST"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST: ${{ steps.newest.outputs.latest }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest="$LATEST"

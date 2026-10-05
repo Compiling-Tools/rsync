@@ -1,0 +1,11 @@
+# Runtime image published by the release workflow. It does not compile
+# anything: the context holds the prebuilt binaries as <platform>/rsync
+# (e.g. linux/arm/v7/rsync) and the license texts in licenses/.
+FROM scratch
+# Links the image to this repository, where each release's source code is.
+LABEL org.opencontainers.image.source=https://github.com/Compiling-Tools/rsync
+ARG TARGETPLATFORM
+# Artifact downloads lose the executable bit, so set it here.
+COPY --chmod=755 ${TARGETPLATFORM}/rsync /usr/bin/rsync
+COPY licenses/ /usr/share/licenses/rsync/
+ENTRYPOINT ["/usr/bin/rsync"]
