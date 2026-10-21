@@ -117,4 +117,14 @@ sh "$prefix/lib/relink.sh"
 tar -czf out/rsync-libs.tar.gz -C "$prefix/lib" licenses \
     libxxhash.a liblz4.a libzstd.a libcrypto.a libacl.a rsync.o relink.sh
 ./sbom.sh out/rsync > out/rsync.spdx.json
+./sbom.sh out/rsync-libs.tar.gz libs > out/rsync-libs.spdx.json
+# Scope the reviewed zlib backports to this binary and their exact source.
+jq --arg sha256 "$(sha256sum out/rsync | cut -d ' ' -f 1)" \
+    --arg source "$(awk '$1 == "rsync" { print $3 }' sources.txt)" '
+    if all(.statements[]; .status_notes | contains($source)) then
+        .["@id"] += "-" + $sha256
+        | .statements[].products |= (. + [{"@id": ("urn:sha256:" + $sha256),
+            hashes: {"sha-256": $sha256}, subcomponents: .}])
+    else error("review zlib.vex.json for the changed rsync source") end' \
+    zlib.vex.json > out/rsync.vex.json
 out/rsync --version

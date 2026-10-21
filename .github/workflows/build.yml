@@ -80,11 +80,23 @@ jobs:
 
       - name: Collect files
         run: |
+          set -o pipefail
           mkdir -p dist "image/$PLATFORM"
           cp out/rsync "dist/rsync-$ARCH"
           cp out/rsync.spdx.json "dist/rsync-$ARCH.spdx.json"
           cp out/rsync-libs.tar.gz "dist/rsync-$ARCH-libs.tar.gz"
+          cp out/rsync-libs.spdx.json "dist/rsync-$ARCH-libs.spdx.json"
+          cp out/rsync.vex.json "dist/rsync-$ARCH.vex.json"
           cp out/rsync "image/$PLATFORM/"
+
+          # CI binaries need their exact source even before a tagged release.
+          ./fetch.sh
+          name=rsync-static-$GITHUB_SHA
+          mkdir -p "stage/$name"
+          git archive HEAD | tar -x -C "stage/$name"
+          cp -r sources "stage/$name/"
+          tar --sort=name --mtime="@$SOURCE_DATE_EPOCH" --owner=0 --group=0 --numeric-owner \
+            -cf - -C stage "$name" | gzip -n > "dist/$name-source.tar.gz"
 
       - name: Attest build provenance
         if: startsWith(github.ref, 'refs/tags/v')
@@ -142,16 +154,11 @@ jobs:
             echo "latest=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # The Corresponding Source for the GPL and LGPL: this repository plus
-      # every pinned tarball, enough to rebuild (and relink) the binaries.
-      - name: Bundle source and licenses
+      # The build artifacts already include the source for this commit.
+      - name: Collect source and licenses
         run: |
           name=rsync-static-${GITHUB_REF_NAME#v}
-          ./fetch.sh
-          mkdir -p "stage/$name"
-          git archive HEAD | tar -x -C "stage/$name"
-          cp -r sources "stage/$name/"
-          tar -czf "dist/$name-source.tar.gz" -C stage "$name"
+          mv "dist/rsync-static-$GITHUB_SHA-source.tar.gz" "dist/$name-source.tar.gz"
           tar -czf "dist/$name-licenses.tar.gz" -C out licenses
 
       - name: Checksum

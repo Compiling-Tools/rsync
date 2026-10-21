@@ -62,9 +62,20 @@ and `relink.sh`. In Alpine with `build-base` installed for the matching
 architecture, replace `libacl.a` with your modified library and run
 `sh relink.sh`. The source bundle supplies the corresponding source.
 
+Every Actions artifact includes `dist/rsync-static-<build-commit>-source.tar.gz`
+with the exact build scripts, patches and pinned upstream tarballs, alongside
+its binaries. Source and binaries therefore share the artifact's retention.
+
 Each binary's SBOM, `rsync-$arch.spdx.json` in the release, names its
 components by CPE or purl, so vulnerability scanners can check it, e.g.
 `grype sbom:rsync-$arch.spdx.json`.
+
+`rsync-$arch-libs.spdx.json` inventories the relink archive separately,
+including zstd's MIT-licensed divsufsort code and its notice. That code is
+not linked into rsync. `rsync-$arch.vex.json` records six verified zlib
+backports for the rsync-maintained zlib fork and exact binary hash. Matching
+these VEX statements depends on the scanner; they do not cover other
+advisories or a modified library.
 
 ## How It Works
 
@@ -116,14 +127,17 @@ compression and checksum method and through an rsync daemon, and checks that
 contents, permissions, owners, times (after 2038, too), links, special files,
 ACLs and extended attributes all arrive intact.
 
-Either way `out/` gets `rsync`, its SBOM `rsync.spdx.json` and `licenses/`.
+Either way `out/` gets `rsync`, its SBOM `rsync.spdx.json`, `rsync.vex.json`,
+the relink archive `rsync-libs.tar.gz` and its `rsync-libs.spdx.json`, and
+`licenses/`. The workflow adds the source bundle when collecting CI files.
 `fetch.sh` downloads the tarballs into `sources/`, and any later build, Docker
 or not, reuses the ones already there.
 
 ### Reproducible builds
 
-Two builds of the same commit are bit-for-bit identical, which CI checks on
-every run for `x86_64`. To reproduce a release, build its tagged commit with
+CI rebuilds and compares the `x86_64` binary and its SBOM on every run;
+other architectures are not checked for reproducibility. To reproduce a
+release, build its tagged commit with
 the commit time as `SOURCE_DATE_EPOCH`:
 
 ```sh
@@ -177,6 +191,9 @@ The other libraries are updated by hand: change the version, SHA-256 and URL
 in `sources.txt` after checking the upstream signature, and make sure the
 license table in `licenses/README.md` still applies. Dependabot keeps the Alpine
 image and the GitHub Actions current.
+
+When rsync's source changes, review its bundled zlib backports and update
+`zlib.vex.json`. The build rejects VEX statements for a different source hash.
 
 ## Credits
 

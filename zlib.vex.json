@@ -1,0 +1,45 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/Compiling-Tools/rsync/vex/rsync-3.5.1-zlib",
+  "author": "https://github.com/Compiling-Tools/rsync",
+  "timestamp": "2026-10-22T00:00:00+05:30",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {"name": "CVE-2016-9840"},
+      "products": [{"@id": "pkg:generic/rsync/zlib@1.2.8-rsync-3.5.1"}],
+      "status": "fixed",
+      "status_notes": "Verified rsync 3.5.1 source SHA256 c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef: zlib/inftrees.c uses match-indexed bases. NEWS.md records the backport: https://github.com/RsyncProject/rsync/blob/v3.5.1/NEWS.md#L1820-L1821 . Upstream fix: https://github.com/madler/zlib/commit/6a043145ca6e9c55184013841a67b2fef87e44c0 ."
+    },
+    {
+      "vulnerability": {"name": "CVE-2016-9841"},
+      "products": [{"@id": "pkg:generic/rsync/zlib@1.2.8-rsync-3.5.1"}],
+      "status": "fixed",
+      "status_notes": "Verified rsync 3.5.1 source SHA256 c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef: zlib/inffast.c initializes pointers directly and uses postincrements. NEWS.md records the backport: https://github.com/RsyncProject/rsync/blob/v3.5.1/NEWS.md#L1820-L1821 . Upstream fix: https://github.com/madler/zlib/commit/9aaec95e82117c1cb0f9624264c3618fc380cecb ."
+    },
+    {
+      "vulnerability": {"name": "CVE-2016-9842"},
+      "products": [{"@id": "pkg:generic/rsync/zlib@1.2.8-rsync-3.5.1"}],
+      "status": "fixed",
+      "status_notes": "Verified rsync 3.5.1 source SHA256 c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef: zlib/inflate.c inflateMark shifts unsigned values. NEWS.md records the backport: https://github.com/RsyncProject/rsync/blob/v3.5.1/NEWS.md#L1820-L1821 . Upstream fix: https://github.com/madler/zlib/commit/e54e1299404101a5a9d0cf5e45512b543967f958 ."
+    },
+    {
+      "vulnerability": {"name": "CVE-2016-9843"},
+      "products": [{"@id": "pkg:generic/rsync/zlib@1.2.8-rsync-3.5.1"}],
+      "status": "fixed",
+      "status_notes": "Verified rsync 3.5.1 source SHA256 c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef: zlib/crc32.c uses DOBIG4 postincrements without a buffer predecrement. NEWS.md records the backport: https://github.com/RsyncProject/rsync/blob/v3.5.1/NEWS.md#L1820-L1821 . Upstream fix: https://github.com/madler/zlib/commit/d1d577490c15a0c6862473d7576352a9f18ef811 ."
+    },
+    {
+      "vulnerability": {"name": "CVE-2018-25032"},
+      "products": [{"@id": "pkg:generic/rsync/zlib@1.2.8-rsync-3.5.1"}],
+      "status": "fixed",
+      "status_notes": "Verified rsync 3.5.1 source SHA256 c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef: zlib/deflate.c uses the corrected three-byte sym_buf layout. NEWS.md records the backport: https://github.com/RsyncProject/rsync/blob/v3.5.1/NEWS.md#L1337 . Upstream fix: https://github.com/madler/zlib/commit/5c44459c3b28a9bd3283aaceab7c615f8020c531 ."
+    },
+    {
+      "vulnerability": {"name": "CVE-2022-37434"},
+      "products": [{"@id": "pkg:generic/rsync/zlib@1.2.8-rsync-3.5.1"}],
+      "status": "fixed",
+      "status_notes": "Verified rsync 3.5.1 source SHA256 c55f9c9dc10fb8bec397b399a0fdded53cc9a2d8e30891bb0d63724d25c37bef: zlib/inflate.c bounds gzip EXTRA copying and handles a null extra buffer. NEWS.md records the backport: https://github.com/RsyncProject/rsync/blob/v3.5.1/NEWS.md#L1240 . Upstream fixes: https://github.com/madler/zlib/commit/eff308af425b67093bab25f80f1ae950166bece1 and https://github.com/madler/zlib/commit/1eb7682f845ac9e9bf9ae35bbfb3bad5dacbd91d ."
+    }
+  ]
+}

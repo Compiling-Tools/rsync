@@ -37,11 +37,13 @@ toolchain and whose texts are kept in this directory.
 
 ## Source code
 
-Each release on https://github.com/Compiling-Tools/rsync/releases has the
-complete Corresponding Source next to its binaries as
-`rsync-static-<version>-source.tar.gz`: the build scripts of this repository
-plus every upstream tarball in `sources.txt`, for as long as the binaries are
-offered. musl and the GCC runtime are System Libraries of the Alpine build
+Each Actions binary artifact includes its complete Corresponding Source in
+`dist/rsync-static-<build-commit>-source.tar.gz`: this repository's build
+scripts, patches, license and manifest, plus every upstream tarball in
+`sources.txt`. Releases on https://github.com/Compiling-Tools/rsync/releases
+include the same source as `rsync-static-<version>-source.tar.gz`.
+Keep the source available for as long as the binaries are offered.
+musl and the GCC runtime are System Libraries of the Alpine build
 environment (the GCC runtime is also covered by the GCC Runtime Library
 Exception) and are not included; the SBOM records their versions.
 
