@@ -86,7 +86,10 @@ jobs:
           cp out/rsync.spdx.json "dist/rsync-$ARCH.spdx.json"
           cp out/rsync-libs.tar.gz "dist/rsync-$ARCH-libs.tar.gz"
           cp out/rsync-libs.spdx.json "dist/rsync-$ARCH-libs.spdx.json"
-          cp out/rsync.vex.json "dist/rsync-$ARCH.vex.json"
+          # Only builds of reviewed rsync source get VEX; see zlib.vex.json.
+          if [ -f out/rsync.vex.json ]; then
+            cp out/rsync.vex.json "dist/rsync-$ARCH.vex.json"
+          fi
           cp out/rsync "image/$PLATFORM/"
 
           # CI binaries need their exact source even before a tagged release.

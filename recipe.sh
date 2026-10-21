@@ -118,13 +118,21 @@ tar -czf out/rsync-libs.tar.gz -C "$prefix/lib" licenses \
     libxxhash.a liblz4.a libzstd.a libcrypto.a libacl.a rsync.o relink.sh
 ./sbom.sh out/rsync > out/rsync.spdx.json
 ./sbom.sh out/rsync-libs.tar.gz libs > out/rsync-libs.spdx.json
-# Scope the reviewed zlib backports to this binary and their exact source.
-jq --arg sha256 "$(sha256sum out/rsync | cut -d ' ' -f 1)" \
-    --arg source "$(awk '$1 == "rsync" { print $3 }' sources.txt)" '
-    if all(.statements[]; .status_notes | contains($source)) then
+# Bind to this binary only the zlib backport reviews made for this exact rsync
+# source. Other source gets no VEX: a review never carries over to new code.
+source_sha256=$(awk '$1 == "rsync" { print $3 }' sources.txt)
+echo "$source_sha256" | grep -qx '[0-9a-f]\{64\}' ||
+    { echo "error: no valid rsync SHA-256 in sources.txt" >&2; exit 1; }
+jq --arg sha256 "$(sha256sum out/rsync | cut -d ' ' -f 1)" --arg source "$source_sha256" '
+    .statements |= map(select(.status_notes | contains("source SHA256 \($source):")))
+    | if .statements == [] then empty else
         .["@id"] += "-" + $sha256
         | .statements[].products |= (. + [{"@id": ("urn:sha256:" + $sha256),
             hashes: {"sha-256": $sha256}, subcomponents: .}])
-    else error("review zlib.vex.json for the changed rsync source") end' \
-    zlib.vex.json > out/rsync.vex.json
+    end' zlib.vex.json > build/rsync.vex.json
+if [ -s build/rsync.vex.json ]; then
+    mv build/rsync.vex.json out/
+else
+    echo "notice: zlib.vex.json has no review for rsync source $source_sha256; no VEX" >&2
+fi
 out/rsync --version

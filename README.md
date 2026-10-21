@@ -72,10 +72,16 @@ components by CPE or purl, so vulnerability scanners can check it, e.g.
 
 `rsync-$arch-libs.spdx.json` inventories the relink archive separately,
 including zstd's MIT-licensed divsufsort code and its notice. That code is
-not linked into rsync. `rsync-$arch.vex.json` records six verified zlib
-backports for the rsync-maintained zlib fork and exact binary hash. Matching
-these VEX statements depends on the scanner; they do not cover other
-advisories or a modified library.
+not linked into rsync.
+
+`rsync-$arch.vex.json` is optional. It exists only when `zlib.vex.json` holds
+a review of the exact rsync source tarball the binary was built from, and
+then states, for the rsync-maintained zlib fork and that binary's hash, the
+CVEs whose fixes the review found backported (six for rsync 3.5.1). Builds of
+any other source, even the same version with changed bytes, get no VEX
+rather than old findings. Matching VEX statements depends on the scanner.
+They cover only the listed CVEs, and a missing VEX does not mean the binary
+is free of vulnerabilities.
 
 ## How It Works
 
@@ -127,9 +133,9 @@ compression and checksum method and through an rsync daemon, and checks that
 contents, permissions, owners, times (after 2038, too), links, special files,
 ACLs and extended attributes all arrive intact.
 
-Either way `out/` gets `rsync`, its SBOM `rsync.spdx.json`, `rsync.vex.json`,
-the relink archive `rsync-libs.tar.gz` and its `rsync-libs.spdx.json`, and
-`licenses/`. The workflow adds the source bundle when collecting CI files.
+Either way `out/` gets `rsync`, its SBOM `rsync.spdx.json`, the relink
+archive `rsync-libs.tar.gz` and its `rsync-libs.spdx.json`, `licenses/` and,
+for reviewed rsync source, `rsync.vex.json`. The workflow adds the source bundle when collecting CI files.
 `fetch.sh` downloads the tarballs into `sources/`, and any later build, Docker
 or not, reuses the ones already there.
 
@@ -192,8 +198,11 @@ in `sources.txt` after checking the upstream signature, and make sure the
 license table in `licenses/README.md` still applies. Dependabot keeps the Alpine
 image and the GitHub Actions current.
 
-When rsync's source changes, review its bundled zlib backports and update
-`zlib.vex.json`. The build rejects VEX statements for a different source hash.
+A new rsync source builds and ships without VEX until someone reviews it.
+To add one, check each backport in that source and add statements to
+`zlib.vex.json` whose `status_notes` cite the evidence and name the source as
+`source SHA256 <hash>:`. Keep the statements for older sources: they record
+what was reviewed, and the build uses only those for the current hash.
 
 ## Credits
 

@@ -78,7 +78,7 @@ files=$tmp/files
     package popt "" "$rsync_url" "" X11 "" "Copy bundled in the rsync source tarball"
     zlib_fork_version=$zlib_version-rsync-$rsync_version
     package zlib "$zlib_fork_version" "$rsync_url" "" Zlib "pkg:generic/rsync/zlib@$zlib_fork_version" \
-        "rsync-maintained fork of upstream zlib $zlib_version with backported fixes; enclosed by rsync $rsync_version source tarball SHA-256 $rsync_sha256. See zlib.vex.json for reviewed CVE status."
+        "rsync-maintained fork of upstream zlib $zlib_version with backported fixes; enclosed by rsync $rsync_version source tarball SHA-256 $rsync_sha256. CVE reviews, if any, are per source tarball in zlib.vex.json."
     if [ "$scope" = libs ]; then
         package zstd-divsufsort "" "$(awk '$1 == "zstd" { print $4 }' sources.txt)" "" MIT "" \
             "lib/dictBuilder/divsufsort.c is included in the complete libzstd.a archive, but is not linked into the rsync executable"
