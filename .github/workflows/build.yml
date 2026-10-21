@@ -83,13 +83,16 @@ jobs:
           mkdir -p dist "image/$PLATFORM"
           cp out/rsync "dist/rsync-$ARCH"
           cp out/rsync.spdx.json "dist/rsync-$ARCH.spdx.json"
+          cp out/rsync-libs.tar.gz "dist/rsync-$ARCH-libs.tar.gz"
           cp out/rsync "image/$PLATFORM/"
 
       - name: Attest build provenance
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
-          subject-path: dist/rsync-${{ matrix.arch }}
+          subject-path: |
+            dist/rsync-${{ matrix.arch }}
+            dist/rsync-${{ matrix.arch }}-libs.tar.gz
 
       - name: Attest SBOM
         if: startsWith(github.ref, 'refs/tags/v')

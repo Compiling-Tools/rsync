@@ -104,9 +104,17 @@ case $headers in
     *INTERP*) echo "error: rsync is dynamically linked" >&2; exit 1 ;;
 esac
 
+make -s --eval="relink-object:; \$(LD) -r -o $prefix/lib/rsync.o \$(OBJS)" relink-object
 strip rsync
 cp rsync "$root/out/"
 cd "$root"
 cp licenses/* out/licenses/
+# The full zstd archive also includes its MIT-licensed dictionary builder.
+sed -n '1,/^ \*\//p' build/zstd/lib/dictBuilder/divsufsort.c > out/licenses/zstd-divsufsort.txt
+cp -r out/licenses "$prefix/lib/"
+cp relink.sh "$prefix/lib/"
+sh "$prefix/lib/relink.sh"
+tar -czf out/rsync-libs.tar.gz -C "$prefix/lib" licenses \
+    libxxhash.a liblz4.a libzstd.a libcrypto.a libacl.a rsync.o relink.sh
 ./sbom.sh out/rsync > out/rsync.spdx.json
 out/rsync --version

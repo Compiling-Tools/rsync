@@ -13,6 +13,7 @@ with it and keep their own notices.
 | libacl                               | LGPL-2.1-or-later                        | `acl.txt`                             |
 | libcrypto (OpenSSL 3)                | Apache-2.0                               | `openssl.txt`                         |
 | libzstd                              | BSD-3-Clause[^zstd]                      | `zstd.txt`                            |
+| xxHash (adapted, bundled with zstd)  | BSD-3-Clause                             | `zstd.txt`, `xxhash.txt`              |
 | liblz4                               | BSD-2-Clause[^lz4]                       | `lz4.txt`                             |
 | libxxhash                            | BSD-2-Clause                             | `xxhash.txt`                          |
 | musl libc                            | MIT[^musl]                               | `musl.txt`, `musl-arm-memcpy.txt`     |
@@ -60,6 +61,11 @@ all of rsync's source and build scripts. To relink, replace the acl tarball in
 `sources/`, update its version and SHA-256 in `sources.txt`, and run the build
 again. The build installs Alpine's current compiler and musl, which may be
 newer than the versions recorded in the SBOM.
+
+Alternatively, extract `rsync-<arch>-libs.tar.gz`, replace `libacl.a` with
+your modified library, and run `sh relink.sh` in Alpine with `build-base`
+installed for that architecture. The archive includes rsync's application
+object code, including its bundled popt and zlib.
 
 ## rsync and OpenSSL
 

@@ -56,6 +56,12 @@ gh attestation verify oci://ghcr.io/compiling-tools/rsync:latest --repo Compilin
 
 `SHA256SUMS` in each release lists the checksums of all its files.
 
+`rsync-<arch>-libs.tar.gz` contains the built static library archives
+and their license notices, rsync's combined application object `rsync.o`,
+and `relink.sh`. In Alpine with `build-base` installed for the matching
+architecture, replace `libacl.a` with your modified library and run
+`sh relink.sh`. The source bundle supplies the corresponding source.
+
 Each binary's SBOM, `rsync-$arch.spdx.json` in the release, names its
 components by CPE or purl, so vulnerability scanners can check it, e.g.
 `grype sbom:rsync-$arch.spdx.json`.

@@ -50,6 +50,8 @@ gcc_version=$(apk_version gcc)
 alpine=alpine-$(cat /etc/alpine-release)
 zlib_version=$(sed -n 's/^#define ZLIB_VERSION "\(.*\)"/\1/p' build/rsync/zlib/zlib.h)
 [ -n "$zlib_version" ] || { echo "error: no version for zlib" >&2; exit 1; }
+zstd_xxhash_version=$(awk '/^#define XXH_VERSION_(MAJOR|MINOR|RELEASE) / { print $3 }' build/zstd/lib/common/xxhash.h | paste -sd.)
+[ -n "$zstd_xxhash_version" ] || { echo "error: no version for zstd xxHash" >&2; exit 1; }
 # musl's memcpy for 32-bit ARM comes from Android under BSD-2-Clause.
 case $arch in
     armhf | armv7) musl_license="MIT AND BSD-2-Clause" ;;
@@ -66,6 +68,8 @@ trap 'rm -f "$components"' EXIT
         if [ "$cpe" = - ]; then cpe=; else cpe="cpe:2.3:a:$cpe:$version:*:*:*:*:*:*:*"; fi
         package "$name" "$version" "$url" "$sha256" "$license" "$cpe" ""
     done
+    package zstd-xxhash "$zstd_xxhash_version" "$(awk '$1 == "zstd" { print $4 }' sources.txt)" "" BSD-3-Clause "" \
+        "Adapted xxHash copy bundled in zstd's lib/common/xxhash.h"
     package popt "" NOASSERTION "" X11 "" "Copy bundled in the rsync source tarball"
     # Not zlib's CPE: rsync patches its copy, so the CVEs of upstream zlib
     # 1.2.8 do not apply; fixes to it are rsync releases.
@@ -81,7 +85,7 @@ trap 'rm -f "$components"' EXIT
         "GCC runtime from the Alpine toolchain: crtbegin/crtend, and libgcc.a where the architecture needs it"
 } > "$components"
 
-expected=$(grep -v '^#' sources.txt | awk 'NF { print $1 }'; printf '%s\n' popt zlib musl libgcc)
+expected=$(grep -v '^#' sources.txt | awk 'NF { print $1 }'; printf '%s\n' zstd-xxhash popt zlib musl libgcc)
 if [ "$(jq -r .name "$components")" != "$expected" ]; then
     echo "error: the SBOM is missing components" >&2
     exit 1
@@ -115,8 +119,9 @@ jq -s --arg version "$rsync_version" --arg arch "$arch" \
         relationships: (
             [{spdxElementId: "SPDXRef-DOCUMENT", relationshipType: "DESCRIBES", relatedSpdxElement: $binary.SPDXID}]
             + [$components[] | {
-                spdxElementId: $binary.SPDXID,
-                relationshipType: (if .name == "rsync" then "GENERATED_FROM" else "STATIC_LINK" end),
+                spdxElementId: (if .name == "zstd-xxhash" then "SPDXRef-Package-zstd" else $binary.SPDXID end),
+                relationshipType: (if .name == "rsync" then "GENERATED_FROM"
+                    elif .name == "zstd-xxhash" then "CONTAINS" else "STATIC_LINK" end),
                 relatedSpdxElement: .SPDXID
             }]
         )
